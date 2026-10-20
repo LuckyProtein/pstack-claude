@@ -107,6 +107,8 @@ export function stampMuseManifest(text, { skills }) {
   return JSON.stringify(manifest, null, 2) + "\n";
 }
 
+const MUSE_HOOK = ["sh", "hooks/session-start.sh", "muse"];
+
 // The Muse build is a native Muse plugin bundle: its manifest keeps the
 // Claude Code plugin's name, and every capability path it lists exists in the
 // package. The SessionStart hook runs the shared hook script with `muse`.
@@ -140,12 +142,12 @@ export function validateMuseManifest(manifest, { claude, pathExists }) {
   const hooks = manifest.capabilities?.hooks ?? [];
   const sessionStart = hooks.filter((hook) => hook.event === "SessionStart");
   if (sessionStart.length !== 1) throw new Error(`${at}: expected one SessionStart hook, found ${sessionStart.length}`);
-  const argv = sessionStart[0].command ?? [];
-  const script = argv.find((part) => typeof part === "string" && part.endsWith(".sh"));
-  if (!script || !pathExists(`${PLUGIN}/${script}`)) {
-    throw new Error(`${at}: SessionStart hook command names no script in the plugin`);
+  // The manifest's hook command is hand-written, not stamped, so it must be
+  // exactly the shared script inside the plugin, run with `muse`.
+  const command = JSON.stringify(sessionStart[0].command);
+  if (command !== JSON.stringify(MUSE_HOOK) || !pathExists(`${PLUGIN}/${MUSE_HOOK[1]}`)) {
+    throw new Error(`${at}: SessionStart hook command is ${command}, not ${JSON.stringify(MUSE_HOOK)}`);
   }
-  if (argv.at(-1) !== "muse") throw new Error(`${at}: SessionStart hook must pass "muse" to its script`);
 }
 
 // The pstack Pi extension resolves each Claude alias a skill names through the

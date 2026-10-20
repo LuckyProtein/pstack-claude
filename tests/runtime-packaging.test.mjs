@@ -73,7 +73,16 @@ describe("validateMuseManifest", () => {
     expect(() => validateMuseManifest(noHook, { claude, pathExists })).toThrow("expected one SessionStart hook, found 0");
     const wrongArg = structuredClone(ok);
     wrongArg.capabilities.hooks[0].command = ["sh", "hooks/session-start.sh", "claude"];
-    expect(() => validateMuseManifest(wrongArg, { claude, pathExists })).toThrow('must pass "muse"');
+    expect(() => validateMuseManifest(wrongArg, { claude, pathExists })).toThrow('not ["sh","hooks/session-start.sh","muse"]');
+  });
+
+  test("rejects a hook command that leaves the plugin or is not an argv list", () => {
+    const everywhere = () => true;
+    for (const command of [["sh", "../../tests/copilot-smoke.sh", "muse"], "sh hooks/session-start.sh muse"]) {
+      const bad = structuredClone(ok);
+      bad.capabilities.hooks[0].command = command;
+      expect(() => validateMuseManifest(bad, { claude, pathExists: everywhere })).toThrow("SessionStart hook command is");
+    }
   });
 
   test("rejects a command whose id duplicates a skill id", () => {
