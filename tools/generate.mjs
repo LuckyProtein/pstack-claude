@@ -906,7 +906,7 @@ export function plan(root, models) {
   for (const runtime of PROMPT_RUNTIMES) {
     for (const skill of slashCommands(read(COMMANDS_DOC), publicSkills(join(root, SKILLS)))) {
       const preamble = (leads.get(`${SKILLS}/${skill.name}/SKILL.md`) ?? []).includes(runtime.preamble);
-      put(`${runtime.prompts}/${skill.name}.md`, (runtime.stub ?? promptStub)(skill, runtime, { preamble }));
+      put(`${runtime.prompts}/${skill.name}.md`, promptStub(skill, runtime, { preamble }));
     }
   }
   for (const runtime of RUNTIMES.filter((r) => r.stampManifest)) {

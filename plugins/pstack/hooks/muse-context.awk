@@ -10,39 +10,17 @@
 END {
   emit("session-start-muse.md")
   if (!found) exit
+  # Muse keeps each usable line rather than the whole sheet or none, so the
+  # problems string, which also counts missing roles, goes unused.
+  sheet_problems()
   n = sheet_roles(roles, panel)
-  split("", want)
-  for (i = 1; i <= n; i++) want[roles[i]] = 1
-  split("", VALUE)
-  for (i = 1; i <= SHEET_N; i++) {
-    key = sheet_key(SHEET[i])
-    if (key in want || key == "default effort") VALUE[key] = sheet_value(SHEET[i])
-  }
   lines = ""
-  for (i = 1; i <= n; i++) {
-    if (!(roles[i] in VALUE)) continue
-    if (clean(VALUE[roles[i]])) lines = lines roles[i] ": " VALUE[roles[i]] "\n"
-  }
-  if (("default effort" in VALUE) && (VALUE["default effort"] == "session" || (VALUE["default effort"] in SHEET_EFFORT))) {
-    lines = lines "default effort: " VALUE["default effort"] "\n"
-  }
+  for (i = 1; i <= n; i++) if (SHEET_OK[roles[i]]) lines = lines roles[i] ": " VALUE[roles[i]] "\n"
+  if (SHEET_EFFORT_OK) lines = lines "default effort: " VALUE["default effort"] "\n"
   if (lines == "") exit
   print ""
   emit("session-start-muse-sheet.md")
   printf "%s", lines
-}
-
-# A role value is usable when every comma entry is an alias or a model ID,
-# once its reasoning effort suffix comes off. Anything else stays out.
-function clean(value,    m, E, j, e) {
-  m = split(value, E, ",")
-  if (m == 0) return 0
-  for (j = 1; j <= m; j++) {
-    e = sheet_model(sheet_trim(E[j]))
-    if (e == "") return 0
-    if (!sheet_alias(e) && e !~ /^[a-z0-9][a-z0-9.-]*$/) return 0
-  }
-  return 1
 }
 
 function emit(name,    file, line) {

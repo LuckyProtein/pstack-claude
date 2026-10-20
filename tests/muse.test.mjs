@@ -3,23 +3,24 @@
 // Muse model section renders Muse IDs with no Claude slug.
 import { describe, expect, test } from "bun:test";
 import { existsSync, readFileSync } from "node:fs";
-import { join, relative } from "node:path";
+import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { agentSkills, loadModels } from "../tools/generate.mjs";
 import { PLUGIN } from "../tools/plugin.mjs";
-import { museModelNamesSection, stampMuseManifest } from "../tools/runtimes.mjs";
-import { markdownFiles } from "../tools/validate-skills.mjs";
+import { museModelNamesSection, RUNTIMES, stampMuseManifest } from "../tools/runtimes.mjs";
+import { mappingCoverage } from "./mapping-coverage.mjs";
 
 const repoRoot = fileURLToPath(new URL("..", import.meta.url));
 const skillsDir = join(repoRoot, PLUGIN, "skills");
-const mapping = readFileSync(join(skillsDir, "poteto-mode/references/muse-tools.md"), "utf8");
+const muse = RUNTIMES.find((runtime) => runtime.key === "muse");
+const mapping = readFileSync(join(repoRoot, muse.tools), "utf8");
 const models = loadModels();
 const manifest = JSON.parse(readFileSync(join(repoRoot, PLUGIN, ".muse-plugin/plugin.json"), "utf8"));
 
 // Claude-specific terms a skill may name, and the text muse-tools.md must
-// carry to map each one. A term the skills stop using drops out of the check.
-const TERMS = [
+// carry to map each one.
+mappingCoverage(muse, [
   ["AskUserQuestion", "`AskUserQuestion`"],
   ["subagent_type", "`subagent_type"],
   ["run_in_background", "`run_in_background: true`"],
@@ -33,20 +34,9 @@ const TERMS = [
   ["CLAUDE.md", "`CLAUDE.md`"],
   ["pstack:poteto-agent", "`pstack:poteto-agent`"],
   ["general-purpose", "`general-purpose`"],
-];
+]);
 
-const skillText = markdownFiles(skillsDir)
-  .filter((f) => !f.endsWith("/muse-tools.md"))
-  .map((f) => [relative(skillsDir, f), readFileSync(f, "utf8")]);
-
-describe("muse-tools.md coverage", () => {
-  for (const [term, row] of TERMS) {
-    const users = skillText.filter(([, text]) => text.includes(term)).map(([rel]) => rel);
-    test(`${term} (${users.length} files) has a Muse mapping`, () => {
-      if (users.length) expect(mapping).toContain(row);
-    });
-  }
-
+describe("muse-tools.md Model names", () => {
   test("the Model names section carries the Muse tier models", () => {
     for (const id of [models.muse.default, models.muse.strongest, models.muse.worker, ...models.muse.panel]) {
       expect(mapping).toContain(id);

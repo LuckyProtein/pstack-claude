@@ -27,7 +27,7 @@ export const RUNTIMES = [
     key: "codex",
     mapping: "codex-tools.md",
     modelNames: codexModelNamesSection,
-    checkModels: checkCodexModels,
+    checkModels: tierExamples("codex"),
     skillPreambles: true,
     prompts: `${PLUGIN}/.codex-plugin/prompts`,
     manifest: `${PLUGIN}/.codex-plugin/plugin.json`,
@@ -62,7 +62,7 @@ export const RUNTIMES = [
     key: "muse",
     mapping: "muse-tools.md",
     modelNames: museModelNamesSection,
-    checkModels: checkMuseModels,
+    checkModels: tierExamples("muse"),
     skillPreambles: true,
     manifest: `${PLUGIN}/.muse-plugin/plugin.json`,
     validate: ({ manifest, read, pathExists }) =>
@@ -80,22 +80,17 @@ export const RUNTIMES = [
 }));
 
 // Codex and Muse have no Claude aliases, so each block gives a model per tier.
-const tierExamples = (label) => (block, { raw, fail, unique }) => {
-  for (const tier of Object.keys(raw.tiers)) {
-    if (!Object.hasOwn(block, tier)) fail(`${label} has no example for tier "${tier}"`);
-  }
-  for (const [tier, value] of Object.entries(block)) {
-    if (!Object.hasOwn(raw.tiers, tier)) fail(`${label} names "${tier}", which is not a tier`);
-    unique([value].flat(), `${label} "${tier}"`);
-  }
-};
-
-function checkCodexModels(codex, context) {
-  tierExamples("codex")(codex, context);
-}
-
-function checkMuseModels(muse, context) {
-  tierExamples("muse")(muse, context);
+// A declaration, so the RUNTIMES rows above can call it at module load.
+function tierExamples(label) {
+  return (block, { raw, fail, unique }) => {
+    for (const tier of Object.keys(raw.tiers)) {
+      if (!Object.hasOwn(block, tier)) fail(`${label} has no example for tier "${tier}"`);
+    }
+    for (const [tier, value] of Object.entries(block)) {
+      if (!Object.hasOwn(raw.tiers, tier)) fail(`${label} names "${tier}", which is not a tier`);
+      unique([value].flat(), `${label} "${tier}"`);
+    }
+  };
 }
 
 // The Muse manifest's skill list, rewritten from the tree the generator
@@ -184,45 +179,55 @@ const tierRoles = (models, tier) =>
     .map((r) => code(r.role))
     .join(", ");
 
-export function codexModelNamesSection(models) {
+// The Model names section of a runtime whose models.json block gives a model
+// per tier. `panel` follows "A good default panel", `dispatch` is an optional
+// paragraph before the closing line, and `ids` names what the sheet lists.
+function tierModelNamesSection(models, { label, block, worker, panel, dispatch, ids }) {
   return (
     "Skills name Claude defaults (a single-role default for code/prose/judgment, a worker model for " +
     "feature and refactoring code, plus a diverse-model panel for diverse-model panels; each model-consuming skill lists its own in a " +
-    "Models section). These slugs do not resolve on Codex. Substitute your configured Codex models:\n\n" +
-    `- Single-model roles: your primary Codex model (for example ${code(models.codex.default)}).\n` +
+    `Models section). These slugs do not resolve on ${label}. Substitute your configured ${label} models:\n\n` +
+    `- Single-model roles: your primary ${label} model (for example ${code(block.default)}).\n` +
     `- Roles that default to the Claude worker model (${tierRoles(models, "worker")}): ` +
-    `your fast Codex code model (for example ${code(models.codex.worker)}).\n` +
+    `your ${worker} (for example ${code(block.worker)}).\n` +
     `- Roles that default to the strongest Claude model (${tierRoles(models, "strongest")}): ` +
-    `your strongest Codex model (for example ${code(models.codex.strongest)}).\n` +
+    `your strongest ${label} model (for example ${code(block.strongest)}).\n` +
     "- Diverse-model panels (`arena`, `architect`, `interrogate`, `how` critics, `reflect`): the adversarial " +
-    "signal comes from model diversity, so use the distinct Codex models available to you. A good default panel " +
-    `on ChatGPT is ${codeList(models.codex.panel)}. If only one model family is reachable, vary reasoning ` +
-    "effort and note in the verdict that diversity was reduced.\n\n" +
-    "`/setup-pstack` writes the configured model list. On Codex, set it to your Codex model slugs."
+    `signal comes from model diversity, so use the distinct ${label} models available to you. A good default panel ` +
+    panel(codeList(block.panel)) +
+    "\n\n" +
+    (dispatch ? `${dispatch}\n\n` : "") +
+    `\`/setup-pstack\` writes the configured model list. On ${label}, set it to your ${ids}.`
   );
 }
 
+export function codexModelNamesSection(models) {
+  return tierModelNamesSection(models, {
+    label: "Codex",
+    block: models.codex,
+    worker: "fast Codex code model",
+    panel: (list) =>
+      `on ChatGPT is ${list}. If only one model family is reachable, vary reasoning ` +
+      "effort and note in the verdict that diversity was reduced.",
+    ids: "Codex model slugs",
+  });
+}
+
 export function museModelNamesSection(models) {
-  return (
-    "Skills name Claude defaults (a single-role default for code/prose/judgment, a worker model for " +
-    "feature and refactoring code, plus a diverse-model panel for diverse-model panels; each model-consuming skill lists its own in a " +
-    "Models section). These slugs do not resolve on Muse. Substitute your configured Muse models:\n\n" +
-    `- Single-model roles: your primary Muse model (for example ${code(models.muse.default)}).\n` +
-    `- Roles that default to the Claude worker model (${tierRoles(models, "worker")}): ` +
-    `your fast Muse model (for example ${code(models.muse.worker)}).\n` +
-    `- Roles that default to the strongest Claude model (${tierRoles(models, "strongest")}): ` +
-    `your strongest Muse model (for example ${code(models.muse.strongest)}).\n` +
-    "- Diverse-model panels (`arena`, `architect`, `interrogate`, `how` critics, `reflect`): the adversarial " +
-    "signal comes from model diversity, so use the distinct Muse models available to you. A good default panel " +
-    `is ${codeList(models.muse.panel)}. Muse serves one model family, so vary reasoning effort across the panel ` +
-    "too and note in the verdict that diversity was reduced.\n\n" +
-    "Pass a role's model where the dispatch takes one: a Workflow child's `model`, or the session model when " +
-    "the dispatch has no model field. `subagent_spawn` takes an agent definition, not a model, so a role " +
-    "dispatched that way runs on the session's model and effort; a Workflow child takes both (see Subagent policy). " +
-    "`inherit-parent` or `auto` omits `model`.\n\n" +
-    "`/setup-pstack` writes the configured model list. On Muse, set it to your Muse model IDs, as " +
-    "`muse model-profile` and the model catalog name them."
-  );
+  return tierModelNamesSection(models, {
+    label: "Muse",
+    block: models.muse,
+    worker: "fast Muse model",
+    panel: (list) =>
+      `is ${list}. Muse serves one model family, so vary reasoning effort across the panel ` +
+      "too and note in the verdict that diversity was reduced.",
+    dispatch:
+      "Pass a role's model where the dispatch takes one: a Workflow child's `model`, or the session model when " +
+      "the dispatch has no model field. `subagent_spawn` takes an agent definition, not a model, so a role " +
+      "dispatched that way runs on the session's model and effort; a Workflow child takes both (see Subagent policy). " +
+      "`inherit-parent` or `auto` omits `model`.",
+    ids: "Muse model IDs, as `muse model-profile` and the model catalog name them",
+  });
 }
 
 export function piModelNamesSection(models) {
