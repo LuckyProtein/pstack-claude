@@ -16,8 +16,12 @@ case "${1:-}" in
     sheet="${COPILOT_HOME:-$HOME/.copilot}/pstack-models.md"
     reader="${COPILOT_PLUGIN_ROOT}/skills/setup-pstack/scripts/read-sheet.sh"
     ;;
+  muse)
+    sheet="${XDG_CONFIG_HOME:-$HOME/.config}/muse/pstack-models.md"
+    reader="${MUSE_PLUGIN_ROOT}/skills/setup-pstack/scripts/read-sheet.sh"
+    ;;
   *)
-    echo "session-start.sh: unknown runtime '${1:-}' (expected claude, codex, or copilot)" >&2
+    echo "session-start.sh: unknown runtime '${1:-}' (expected claude, codex, copilot, or muse)" >&2
     exit 2
     ;;
 esac
@@ -41,6 +45,16 @@ if [ "$1" = copilot ]; then
     -f "${COPILOT_PLUGIN_ROOT}/hooks/json.awk" \
     -f "${COPILOT_PLUGIN_ROOT}/skills/setup-pstack/scripts/sheet.awk" \
     -f "${COPILOT_PLUGIN_ROOT}/hooks/copilot-context.awk"
+  exit 0
+fi
+
+# Muse reads stdout as plain additional context. Its sheet has no include
+# mechanism, so the hook adds the sheet's known role lines to the Muse
+# mandate itself, rebuilt from their checked values.
+if [ "$1" = muse ]; then
+  printf '%s\n' "$normalized" | LC_ALL=C awk -v found="$found" -v hooks="${MUSE_PLUGIN_ROOT}/hooks" \
+    -f "${MUSE_PLUGIN_ROOT}/skills/setup-pstack/scripts/sheet.awk" \
+    -f "${MUSE_PLUGIN_ROOT}/hooks/muse-context.awk"
   exit 0
 fi
 

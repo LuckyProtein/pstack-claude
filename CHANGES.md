@@ -2,6 +2,10 @@
 
 This file is the release changelog, with one `## <version> - <title>` entry per release, newest first. The Cursor-to-Claude rewrite rules live in [`tools/substitutions.json`](tools/substitutions.json), and the [sync boundary](CONTRIBUTING.md#the-sync-boundary) in `CONTRIBUTING.md` defines how a change to upstream's skill content is declared.
 
+## 0.9.96 - Muse port
+
+pstack now ships a Muse build. The native plugin manifest under `.muse-plugin/` lists every shared skill and a `SessionStart` hook that injects the poteto-mode mandate in Muse wording once the user approves the plugin's hooks. Muse surfaces each user-invocable skill as a slash command itself, so the build ships no command templates. The plugin's four agent files register as Muse agent definitions, and role effort suffixes pass as a Workflow child's `effort`, the Muse form of the dispatch effort field 0.9.95 standardized on. A new `muse-tools.md` mapping resolves Claude tool names, subagents, transcripts, and Muse model IDs, and `models.json` gains a `muse` block with a model per tier. `setup-pstack` writes the Muse sheet under the Muse config directory, which the hook reads directly. The generator owns the manifest's skill list and the Muse preambles, so the build stays in step with the tree.
+
 ## 0.9.95 - Effort is a field on the dispatch
 
 An `@level` on a role now reaches the child as the dispatch's own effort field on every runtime: `effort` on the Claude Code `Agent` call, `reasoning_effort` on Codex's `spawn_agent` and Copilot's `task`, and `effort` on Pi's `agent` tool. The ten generated agents, `effort-<level>` and `poteto-agent-<level>`, are gone, and so is the `agents` list in the Claude Code plugin manifest. They existed only because the `Agent` call had no effort parameter, and Claude Code 2.1.292 added one. Without the list Claude Code registers the default `agents/` directory, so pstack's agent types are exactly the four under `agents/`: `comment-sicko`, `poteto-agent`, and the two thermo-nuclear subagents. The generator now fails if the manifest gains an `agents` list again. Claude Code 2.1.292 or later is required for `@level`.
