@@ -17,6 +17,12 @@ case "${1:-}" in
     reader="${COPILOT_PLUGIN_ROOT}/skills/setup-pstack/scripts/read-sheet.sh"
     ;;
   muse)
+    # On Windows the manifest's PowerShell hook owns Muse. `uname -s` names a
+    # Windows sh, busybox-w32's as Windows_NT, and OS covers one without uname.
+    case "$(uname -s 2>/dev/null || true)" in
+      MINGW*|MSYS*|CYGWIN*|Windows_NT) exit 0 ;;
+    esac
+    [ "${OS:-}" != Windows_NT ] || exit 0
     sheet="${XDG_CONFIG_HOME:-$HOME/.config}/muse/pstack-models.md"
     reader="${MUSE_PLUGIN_ROOT}/skills/setup-pstack/scripts/read-sheet.sh"
     ;;
@@ -25,18 +31,6 @@ case "${1:-}" in
     exit 2
     ;;
 esac
-
-# Muse's native manifest declares a PowerShell twin of this hook for Windows,
-# where the harness PATH may carry no sh. When a Windows sh reaches this
-# script anyway, as under Git Bash, the twin owns the session.
-if [ "$1" = muse ]; then
-  case "$(uname -s 2>/dev/null || true)" in
-    MINGW*|MSYS*|CYGWIN*|Windows_NT) exit 0 ;;
-  esac
-  if [ "${OS:-}" = Windows_NT ]; then
-    exit 0
-  fi
-fi
 
 # A sheet that cannot be decoded counts as missing, so injection stays on.
 found=0

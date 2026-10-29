@@ -368,7 +368,8 @@
           "-ExecutionPolicy",
           "Bypass",
           "-File",
-          "hooks/session-start-muse.ps1"
+          "hooks/session-start.ps1",
+          "muse"
         ],
         "timeoutMs": 5000,
         "statusMessage": "Loading pstack routing"

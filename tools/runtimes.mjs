@@ -111,15 +111,15 @@ export function stampMuseManifest(text, { skills }) {
 // per-OS variant, and rejects a `commandWindows`-style field. One argv
 // cannot spawn on every OS: Windows has no `sh` unless Git's usr\bin lands
 // on the harness PATH, and Unix has no powershell.exe. The manifest
-// therefore declares a pair, the shared script and its PowerShell twin,
+// therefore declares a pair, the shell script and the PowerShell script,
 // and each stands down on the OS the other owns.
-const MUSE_HOOKS = [
-  ["session-start", ["sh", "hooks/session-start.sh", "muse"], 1],
-  [
-    "session-start-windows",
-    ["powershell.exe", "-NoProfile", "-ExecutionPolicy", "Bypass", "-File", "hooks/session-start-muse.ps1"],
-    5,
-  ],
+export const MUSE_HOOKS = [
+  { id: "session-start", script: "hooks/session-start.sh", command: ["sh", "hooks/session-start.sh", "muse"] },
+  {
+    id: "session-start-windows",
+    script: "hooks/session-start.ps1",
+    command: ["powershell.exe", "-NoProfile", "-ExecutionPolicy", "Bypass", "-File", "hooks/session-start.ps1", "muse"],
+  },
 ];
 
 // The Muse build is a native Muse plugin bundle: its manifest keeps the
@@ -155,13 +155,13 @@ export function validateMuseManifest(manifest, { claude, pathExists }) {
   const hooks = manifest.capabilities?.hooks ?? [];
   const sessionStart = hooks.filter((hook) => hook.event === "SessionStart");
   if (sessionStart.length !== MUSE_HOOKS.length) {
-    throw new Error(`${at}: expected two SessionStart hooks, found ${sessionStart.length}`);
+    throw new Error(`${at}: expected ${MUSE_HOOKS.length} SessionStart hooks, found ${sessionStart.length}`);
   }
   // The hook commands are hand-written, not stamped, so each must name
   // exactly its script inside the plugin.
-  for (const [id, wanted, fileAt] of MUSE_HOOKS) {
+  for (const { id, script, command: wanted } of MUSE_HOOKS) {
     const command = JSON.stringify(sessionStart.find((hook) => hook.id === id)?.command);
-    if (command !== JSON.stringify(wanted) || !pathExists(`${PLUGIN}/${wanted[fileAt]}`)) {
+    if (command !== JSON.stringify(wanted) || !pathExists(`${PLUGIN}/${script}`)) {
       throw new Error(`${at}: SessionStart hook "${id}" command is ${command}, not ${JSON.stringify(wanted)}`);
     }
   }
