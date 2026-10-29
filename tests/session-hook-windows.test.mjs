@@ -119,7 +119,7 @@ const museSheetNote = readFileSync(join(pluginRoot, "hooks/session-start-muse-sh
 const museModels = JSON.parse(readFileSync(join(pluginRoot, "models.json"), "utf8"));
 const withRoles = (lines) => `${museMandate}\n${museSheetNote}\n${lines.map((line) => `${line}\n`).join("")}`;
 
-function runMuseHook({ sheet, xdg, context = museMandate, pluginRootEnv } = {}) {
+function runMuseHook({ sheet, xdg, context = museMandate, pluginRootEnv, omitUserProfile } = {}) {
   const fixture = mkdtempSync(join(tmpdir(), "pstack windows muse hook "));
   try {
     const plugin = join(fixture, "plugin with spaces");
@@ -148,6 +148,7 @@ function runMuseHook({ sheet, xdg, context = museMandate, pluginRootEnv } = {}) 
       if (process.env[name] !== undefined) env[name] = process.env[name];
     }
     if (xdg) env.XDG_CONFIG_HOME = xdgRoot;
+    if (omitUserProfile) delete env.USERPROFILE;
     const [program, ...rest] = museWindowsCommand;
     const args = rest.map((arg) => (arg === "hooks/session-start-muse.ps1" ? join(plugin, "hooks/session-start-muse.ps1") : arg));
     const result = spawnSync(program, args, { env, encoding: "utf8" });
@@ -204,6 +205,15 @@ describe.skipIf(process.platform !== "win32" && !required)("Windows Muse Session
   test("XDG_CONFIG_HOME moves the sheet, and USERPROFILE is the fallback", () => {
     expect(runMuseHook({ sheet: "session hook: off\n", xdg: true })).toEqual({ status: 0, out: "", err: "" });
     expect(runMuseHook({ sheet: "session hook: off\n" })).toEqual({ status: 0, out: "", err: "" });
+  });
+
+  test("finds the sheet without a USERPROFILE variable, as under Muse's hook environment", () => {
+    expect(runMuseHook({ sheet: "session hook: off\n", xdg: true, omitUserProfile: true })).toEqual({
+      status: 0,
+      out: "",
+      err: "",
+    });
+    expect(runMuseHook({ xdg: true, omitUserProfile: true })).toEqual({ status: 0, out: museMandate, err: "" });
   });
 
   test("injects nothing when Muse runs on Linux and interop reaches powershell.exe", () => {

@@ -26,6 +26,18 @@ case "${1:-}" in
     ;;
 esac
 
+# Muse's native manifest declares a PowerShell twin of this hook for Windows,
+# where the harness PATH may carry no sh. When a Windows sh reaches this
+# script anyway, as under Git Bash, the twin owns the session.
+if [ "$1" = muse ]; then
+  case "$(uname -s 2>/dev/null || true)" in
+    MINGW*|MSYS*|CYGWIN*|Windows_NT) exit 0 ;;
+  esac
+  if [ "${OS:-}" = Windows_NT ]; then
+    exit 0
+  fi
+fi
+
 # A sheet that cannot be decoded counts as missing, so injection stays on.
 found=0
 if [ -f "$sheet" ] && [ -r "$sheet" ] && normalized=$(sh "$reader" "$sheet"); then

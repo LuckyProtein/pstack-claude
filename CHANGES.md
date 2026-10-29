@@ -2,6 +2,14 @@
 
 This file is the release changelog, with one `## <version> - <title>` entry per release, newest first. The Cursor-to-Claude rewrite rules live in [`tools/substitutions.json`](tools/substitutions.json), and the [sync boundary](CONTRIBUTING.md#the-sync-boundary) in `CONTRIBUTING.md` defines how a change to upstream's skill content is declared.
 
+## 0.9.112 - The Muse SessionStart hook runs on Windows without sh
+
+The Muse plugin now declares two SessionStart hooks. `session-start` keeps the shared shell script. `session-start-windows` runs `hooks/session-start-muse.ps1`, the PowerShell twin of the script's Muse branch: it prints the mandate and the sheet's usable role lines, in models.json order, under the same off-switch grammar. Muse's native hook schema takes one command per hook and rejects a per-OS variant such as `commandWindows`, so each hook stands down on the OS the other owns, and on a machine without one of the two programs that hook records a failed spawn at session start while the other delivers the context.
+
+Before this release the Muse hook was the sh command alone. On Windows, a harness that hands Muse a PATH without Git's `usr\bin` left the hook at `program not found`, and the session opened without the mandate or the saved model lines. T3 Code on Windows is one such harness.
+
+**Verified.** `tests/session-hook-windows.test.mjs` runs the twin under `PSTACK_REQUIRE_WINDOWS_HOOK=1` with only the PowerShell directory on PATH. It covers the shared off-switch sheet cases, role-line order and filtering, the XDG and USERPROFILE sheet paths, and the Linux stand-down. `tests/session-hook.test.mjs` covers the shell script standing down under a Windows `uname`. Against Muse 1.4.14, `muse plugins validate` accepts the pair, and `muse plugins hook test` returns the mandate and the sheet lines from the PowerShell hook with no `sh` on PATH, where 0.9.111 returns `program not found`.
+
 ## 0.9.111 - GPT-6.1 Sol replaces GPT-6 Sol everywhere
 
 The Codex worker example and the `sonnet` entry of the Pi `openai` and `openai-codex` tables move from `gpt-6-sol` to `gpt-6.1-sol`. GPT-6.1 Sol is the newer Sol and costs less than GPT-6 Sol, so no role has a reason to stay on the older model. `models.json` no longer names `gpt-6-sol`.
