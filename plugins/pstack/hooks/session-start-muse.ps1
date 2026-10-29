@@ -17,17 +17,26 @@ if (-not $sheetRoot) {
     $sheetRoot = Join-Path $profile '.config'
 }
 $sheet = Join-Path (Join-Path $sheetRoot 'muse') 'pstack-models.md'
-$found = $false
-$sheetLines = @()
-if (Test-Path -LiteralPath $sheet -PathType Leaf) {
-    # An unreadable sheet leaves the hook on, as session-start.sh does.
+
+function ReadSheetOrNull([string] $path) {
+    if (-not (Test-Path -LiteralPath $path -PathType Leaf)) {
+        return $null
+    }
     try {
-        $bytes = [System.IO.File]::ReadAllBytes($sheet)
+        $bytes = [System.IO.File]::ReadAllBytes($path)
         # Windows PowerShell 5.1's `>` writes UTF-16 LE with a byte-order mark.
         $encoding = if ($bytes.Length -ge 2 -and $bytes[0] -eq 0xFF -and $bytes[1] -eq 0xFE) { [System.Text.Encoding]::Unicode } else { [System.Text.UTF8Encoding]::new($false) }
-        $sheetLines = $encoding.GetString($bytes).TrimStart([char]0xFEFF) -split "`n" | ForEach-Object { $_ -replace "`r$", '' }
-        $found = $true
-    } catch { }
+        $lines = $encoding.GetString($bytes).TrimStart([char]0xFEFF) -split "`n" | ForEach-Object { $_ -replace "`r$", '' }
+        return , @($lines)
+    } catch {
+        return $null
+    }
+}
+
+$sheetLines = ReadSheetOrNull $sheet
+$found = $null -ne $sheetLines
+if (-not $found) {
+    $sheetLines = @()
 }
 if ($found -and $sheetLines -ccontains 'session hook: off') {
     exit 0
