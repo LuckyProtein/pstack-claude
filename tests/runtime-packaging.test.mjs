@@ -55,7 +55,7 @@ describe("validateMuseManifest", () => {
       hooks: MUSE_HOOKS.map(({ id, command }) => ({ id, event: "SessionStart", command })),
     },
   };
-  const files = new Set(["skills/poteto-mode/SKILL.md", ...MUSE_HOOKS.map(({ script }) => script)].map((rel) => `plugins/pstack/${rel}`));
+  const files = new Set(["skills/poteto-mode/SKILL.md", "models.json", ...MUSE_HOOKS.map(({ script }) => script)].map((rel) => `plugins/pstack/${rel}`));
   const pathExists = (rel) => files.has(rel);
   test("needs the Claude Code name, native compat, existing paths, and the SessionStart hook pair", () => {
     expect(() => validateMuseManifest(ok, { claude, pathExists })).not.toThrow();
@@ -83,6 +83,8 @@ describe("validateMuseManifest", () => {
     expect(() => validateMuseManifest(noWindowsArg, { claude, pathExists })).toThrow('"hooks/session-start.ps1","muse"]');
     const noScript = (rel) => rel !== "plugins/pstack/hooks/session-start.ps1" && pathExists(rel);
     expect(() => validateMuseManifest(ok, { claude, pathExists: noScript })).toThrow('"session-start-windows" command is');
+    const noModels = (rel) => rel !== "plugins/pstack/models.json" && pathExists(rel);
+    expect(() => validateMuseManifest(ok, { claude, pathExists: noModels })).toThrow("reads models.json, which is not in the plugin");
   });
 
   test("rejects a hook command that leaves the plugin or is not an argv list", () => {

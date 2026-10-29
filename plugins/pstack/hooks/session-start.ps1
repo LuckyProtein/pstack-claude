@@ -7,7 +7,8 @@ function ReadHookFile([string] $name) {
 
 # -ccontains, -ceq, and EndsWith(string) compare by culture, which skips
 # zero-width characters, so sheet text is compared ordinally, as sh and awk
-# compare bytes.
+# compare bytes. The runtime argument comes from the hooks files, not the
+# sheet, so its switch and -ceq stay as they are.
 function HasOrdinal([string[]] $list, [string] $item) {
     $null -ne $list -and [Array]::IndexOf($list, $item) -ge 0
 }
@@ -54,9 +55,10 @@ switch -CaseSensitive ($Runtime) {
         $context = 'session-start-context.md'
     }
     'muse' {
-        # A Linux Muse under WSL reaches powershell.exe through interop, and the
-        # sh hook owns that session. Interop runs this script from a \\wsl UNC
-        # path, and passes MUSE_PLUGIN_ROOT only when WSLENV shares it.
+        # A Linux Muse under WSL can reach powershell.exe through interop, and
+        # the sh hook owns that session. Interop should run this script from a
+        # \\wsl UNC path, and passes MUSE_PLUGIN_ROOT only when WSLENV shares
+        # it; neither signal has been run under WSL.
         if ($PSScriptRoot -like '\\wsl*' -or $env:MUSE_PLUGIN_ROOT -like '/*') {
             exit 0
         }
@@ -73,7 +75,8 @@ switch -CaseSensitive ($Runtime) {
 }
 
 # A missing or unreadable sheet leaves $sheetLines null and the hook on, as
-# session-start.sh does.
+# session-start.sh does. Decoding itself never fails here, unlike iconv in
+# read-sheet.sh, so malformed UTF-16 reads differently (#335).
 $sheetLines = $null
 if (Test-Path -LiteralPath $sheet -PathType Leaf) {
     try {

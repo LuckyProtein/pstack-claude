@@ -307,6 +307,10 @@ describe("Muse SessionStart context", () => {
     }
   });
 
+  test("injects nothing when OS names Windows, for a Windows sh with no uname", () => {
+    expect(runMuseHook(null, { OS: "Windows_NT" })).toEqual({ status: 0, out: "", err: "" });
+  });
+
   test("injects the Muse mandate when no sheet exists", () => {
     expect(runMuseHook(null)).toEqual({ status: 0, out: museMandate, err: "" });
   });

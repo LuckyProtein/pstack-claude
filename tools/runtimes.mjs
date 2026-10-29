@@ -165,6 +165,9 @@ export function validateMuseManifest(manifest, { claude, pathExists }) {
       throw new Error(`${at}: SessionStart hook "${id}" command is ${command}, not ${JSON.stringify(wanted)}`);
     }
   }
+  // The PowerShell hook reads the roles from models.json at runtime, where
+  // sheet.awk has them stamped in.
+  if (!pathExists(`${PLUGIN}/models.json`)) throw new Error(`${at}: hooks/session-start.ps1 reads models.json, which is not in the plugin`);
 }
 
 // The pstack Pi extension resolves each Claude alias a skill names through the
