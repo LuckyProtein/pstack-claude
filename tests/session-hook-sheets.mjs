@@ -31,6 +31,7 @@ export const sheetCases = [
   { name: "trailing space", sheet: "session hook: off \n", off: false },
   { name: "longer value", sheet: "session hook: offline\n", off: false },
   { name: "two byte-order marks before off", sheet: "\ufeff\ufeffsession hook: off\n", off: false },
+  { name: "a zero-width space before off", sheet: "\u200bsession hook: off\n", off: false },
   { name: "a directory in place of the file", sheet: UNREADABLE, off: false },
   ...(chmodDeniesReads ? [{ name: "no read permission on the file", sheet: NO_READ_PERMISSION, off: false }] : []),
 ];
@@ -64,6 +65,8 @@ export const roleCases = [
   { name: "a later usable line for the role", sheet: "bug-fix: !!\nbug-fix: good-1\n", roles: ["bug-fix: good-1"] },
   { name: "default effort session", sheet: "default effort: session\n", roles: ["default effort: session"] },
   { name: "a capitalised default effort", sheet: "default effort: High\n", roles: [] },
+  { name: "a zero-width space before a default effort level", sheet: "default effort: \u200bhigh\n", roles: [] },
+  { name: "a zero-width space before default effort session", sheet: "default effort: \u200bsession\n", roles: [] },
   { name: "no space after the colons", sheet: "default effort:high\nbug-fix:m-1\n", roles: ["bug-fix: m-1", "default effort: high"] },
   { name: "two effort suffixes", sheet: "bug-fix: m-1 @high @low\n", roles: [] },
   { name: "a capitalised effort suffix", sheet: "bug-fix: m-1 @High\n", roles: [] },
