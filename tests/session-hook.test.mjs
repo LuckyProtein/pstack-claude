@@ -296,10 +296,25 @@ function runMuseHook(sheet, env = {}) {
 }
 
 describe("Muse SessionStart context", () => {
-  test("the Muse manifest declares the hook inline", () => {
+  test("the Muse manifest declares the hook pair inline", () => {
     const hooks = museManifest.capabilities.hooks.filter((hook) => hook.event === "SessionStart");
-    expect(hooks).toHaveLength(1);
-    expect(hooks[0].command).toEqual(["sh", "hooks/session-start.sh", "muse"]);
+    expect(hooks.map((hook) => [hook.id, hook.command])).toEqual([
+      ["session-start", ["sh", "hooks/session-start.sh", "muse"]],
+      [
+        "session-start-windows",
+        ["powershell.exe", "-NoProfile", "-ExecutionPolicy", "Bypass", "-File", "hooks/session-start-muse.ps1"],
+      ],
+    ]);
+  });
+
+  test("injects nothing under a Windows sh, where the PowerShell hook owns Muse", () => {
+    const bin = mkdtempSync(join(tmpdir(), "pstack-hook-bin-"));
+    try {
+      writeFileSync(join(bin, "uname"), "#!/bin/sh\necho MINGW64_NT-10.0\n", { mode: 0o755 });
+      expect(runMuseHook(null, { PATH: `${bin}:${process.env.PATH}` })).toEqual({ status: 0, out: "", err: "" });
+    } finally {
+      rmSync(bin, { recursive: true, force: true });
+    }
   });
 
   test("injects the Muse mandate when no sheet exists", () => {

@@ -52,11 +52,21 @@ describe("validateMuseManifest", () => {
     capabilities: {
       skills: [{ id: "poteto-mode", path: "skills/poteto-mode/SKILL.md", enabledDefault: true }],
       commands: [],
-      hooks: [{ id: "session-start", event: "SessionStart", command: ["sh", "hooks/session-start.sh", "muse"] }],
+      hooks: [
+        { id: "session-start", event: "SessionStart", command: ["sh", "hooks/session-start.sh", "muse"] },
+        {
+          id: "session-start-windows",
+          event: "SessionStart",
+          command: ["powershell.exe", "-NoProfile", "-ExecutionPolicy", "Bypass", "-File", "hooks/session-start-muse.ps1"],
+        },
+      ],
     },
   };
-  const pathExists = (rel) => rel === "plugins/pstack/skills/poteto-mode/SKILL.md" || rel === "plugins/pstack/hooks/session-start.sh";
-  test("needs the Claude Code name, native compat, existing paths, and one SessionStart hook", () => {
+  const pathExists = (rel) =>
+    rel === "plugins/pstack/skills/poteto-mode/SKILL.md" ||
+    rel === "plugins/pstack/hooks/session-start.sh" ||
+    rel === "plugins/pstack/hooks/session-start-muse.ps1";
+  test("needs the Claude Code name, native compat, existing paths, and the SessionStart hook pair", () => {
     expect(() => validateMuseManifest(ok, { claude, pathExists })).not.toThrow();
     expect(() => validateMuseManifest({ ...ok, name: "other" }, { claude, pathExists })).toThrow(
       'name "other" != Claude Code manifest name "pstack"',
@@ -70,10 +80,25 @@ describe("validateMuseManifest", () => {
     expect(() => validateMuseManifest(badPath, { claude, pathExists })).toThrow("is not a file in the plugin");
     const noHook = structuredClone(ok);
     noHook.capabilities.hooks = [];
-    expect(() => validateMuseManifest(noHook, { claude, pathExists })).toThrow("expected one SessionStart hook, found 0");
+    expect(() => validateMuseManifest(noHook, { claude, pathExists })).toThrow("expected two SessionStart hooks, found 0");
+    const shOnly = structuredClone(ok);
+    shOnly.capabilities.hooks = shOnly.capabilities.hooks.slice(0, 1);
+    expect(() => validateMuseManifest(shOnly, { claude, pathExists })).toThrow("expected two SessionStart hooks, found 1");
     const wrongArg = structuredClone(ok);
     wrongArg.capabilities.hooks[0].command = ["sh", "hooks/session-start.sh", "claude"];
     expect(() => validateMuseManifest(wrongArg, { claude, pathExists })).toThrow('not ["sh","hooks/session-start.sh","muse"]');
+    const wrongWindowsFile = structuredClone(ok);
+    wrongWindowsFile.capabilities.hooks[1].command = [
+      "powershell.exe",
+      "-NoProfile",
+      "-ExecutionPolicy",
+      "Bypass",
+      "-File",
+      "hooks/session-start.ps1",
+    ];
+    expect(() => validateMuseManifest(wrongWindowsFile, { claude, pathExists })).toThrow(
+      '"hooks/session-start-muse.ps1"',
+    );
   });
 
   test("rejects a hook command that leaves the plugin or is not an argv list", () => {
@@ -81,7 +106,7 @@ describe("validateMuseManifest", () => {
     for (const command of [["sh", "../../tests/copilot-smoke.sh", "muse"], "sh hooks/session-start.sh muse"]) {
       const bad = structuredClone(ok);
       bad.capabilities.hooks[0].command = command;
-      expect(() => validateMuseManifest(bad, { claude, pathExists: everywhere })).toThrow("SessionStart hook command is");
+      expect(() => validateMuseManifest(bad, { claude, pathExists: everywhere })).toThrow('"session-start" command is');
     }
   });
 
