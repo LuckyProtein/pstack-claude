@@ -125,7 +125,9 @@ describe.skipIf(process.platform !== "win32" && !required)("Windows Codex Sessio
 // that broke the sh hook on Windows.
 const museCommand = MUSE_HOOKS.find((hook) => hook.id === "session-start-windows").command;
 const museMandate = readFileSync(join(pluginRoot, "hooks/session-start-muse.md"), "utf8");
-const museSheetNote = readFileSync(join(pluginRoot, "hooks/session-start-muse-sheet.md"), "utf8").trim();
+// The note as the hook prints it, line ending included: a Windows checkout
+// may give it CRLF, which muse-context.awk keeps.
+const museSheetNote = readFileSync(join(pluginRoot, "hooks/session-start-muse-sheet.md"), "utf8");
 
 function runMuseHook({ sheet, xdg, context = museMandate, pluginRootEnv, omitUserProfile } = {}) {
   const fixture = mkdtempSync(join(tmpdir(), "pstack windows muse hook "));
@@ -173,7 +175,7 @@ describe.skipIf(process.platform !== "win32" && !required)("Windows Muse Session
 
   for (const { name, sheet, roles } of roleCases) {
     test(`adds ${roles.length ? roles.join(", ") : "no role lines"} for a sheet with ${name}`, () => {
-      const out = roles.length ? `${museMandate}\n${museSheetNote}\n${roles.join("\n")}\n` : museMandate;
+      const out = roles.length ? `${museMandate}\n${museSheetNote}${roles.join("\n")}\n` : museMandate;
       expect(runMuseHook({ sheet })).toEqual({ status: 0, out, err: "" });
     });
   }

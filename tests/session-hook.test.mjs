@@ -271,7 +271,9 @@ describe("Copilot SessionStart context", () => {
 });
 
 const museMandate = readFileSync(join(pluginRoot, "hooks/session-start-muse.md"), "utf8");
-const museSheetNote = readFileSync(join(pluginRoot, "hooks/session-start-muse-sheet.md"), "utf8").trim();
+// The note as the hook prints it, line ending included: a Windows checkout
+// may give it CRLF, which muse-context.awk keeps.
+const museSheetNote = readFileSync(join(pluginRoot, "hooks/session-start-muse-sheet.md"), "utf8");
 
 // Muse declares the hook inline in its native manifest and runs it with
 // MUSE_PLUGIN_ROOT set; its stdout is plain additional context.
@@ -311,7 +313,7 @@ describe("Muse SessionStart context", () => {
 
   for (const { name, sheet, roles } of roleCases) {
     test(`adds ${roles.length ? roles.join(", ") : "no role lines"} for a sheet with ${name}`, () => {
-      const out = roles.length ? `${museMandate}\n${museSheetNote}\n${roles.join("\n")}\n` : museMandate;
+      const out = roles.length ? `${museMandate}\n${museSheetNote}${roles.join("\n")}\n` : museMandate;
       expect(runMuseHook(sheet)).toEqual({ status: 0, out, err: "" });
     });
   }
